@@ -57,19 +57,27 @@ def update_ctags(app, doctree, docname, ctags, domains_db):
     for node in doctree.traverse(node_filter):
         for id in node['ids']:
             if id in domains_db:
-                ctags[id] = node_to_db_entry(
+                try:
+                    ctags[id] = node_to_db_entry(
                         node, app.srcdir, app.config.ctags_relpath)
+                except NodeSourceError:
+                    pass
 
     # document xref
     idx = '/' + docname
-    ctags[idx] = node_to_db_entry(
+    try:
+        ctags[idx] = node_to_db_entry(
             doctree.next_node(), app.srcdir, app.config.ctags_relpath)
+    except NodeSourceError:
+        pass
 
     return ctags
 
 
 def node_to_db_entry(node, basedir, use_relpath=True):
     path = node.source
+    if path is None:
+        raise NodeSourceError
     if use_relpath:
         path = os.path.relpath(path, basedir)
 
@@ -88,3 +96,6 @@ def setup(app):
     app.add_config_value('ctags_filename', 'tags', False)
     app.add_config_value('ctags_relpath', True, False)
     app.connect('doctree-resolved', doctree_resolved)
+
+
+class NodeSourceError(Exception): pass
